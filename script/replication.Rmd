@@ -1,0 +1,208 @@
+---
+title: "replication"
+author: "Tahmid Ahmed"
+date: "4/12/2021"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## R Markdown
+
+```{r}
+# Load packages
+library(tidyverse)
+library(ggplot2)
+library(miceadds)
+library(stargazer)
+library(sandwich)
+library(plm)
+library(clubSandwich)
+library(AER)
+library(estimatr)
+library(fixest)
+library(cowplot)
+library(foreign)
+library(haven)
+# Set working directory
+setwd("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication")
+```
+
+```{r}
+# Load data
+rep_data <- miceadds::load.Rdata2( filename="ReplicationData.Rdata", path = "/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/data" ) 
+```
+
+```{r}
+##########################################################################
+# 	A. Data: summary stats
+##########################################################################
+
+# #	Summary statistics
+# quiet estpost sum elecrate_total elecrate_rural elecrate_urban ///
+# 	delec_total_lowess delec_rural_lowess delec_urban_lowess	///
+# 	wb_popdensityK ///
+# 	pop_urban_rate rents_ff loghydropowercapitaK polity2 loggdpcap time ///
+# 		if elecrate_total!=. | elecrate_rural!=. | elecrate_urban!=., d
+# esttab using "SummaryStats.tex", ///
+# 	cells("mean(label(Mean) fmt(2)) p50(label(Median) fmt(1)) sd(label(S.D.) fmt(1)) min(label(Min.) fmt(1)) max(label(Max) fmt(1)) count(label(Obs.) fmt(0))") ///
+# 	nonumber label replace noobs	///
+# 	substitute(m$ m\\$)	
+# eststo clear
+
+summary(rep_data)
+```
+
+```{r}
+# wrong so far
+ref1 <- lm.cluster(data = rep_data, formula = ahu_total_w99 ~ time, cluster = "ccode")
+summary(ref1)
+```
+
+```{r} 
+# correct so far
+
+# on all 
+FE_mod1 = plm(ahu_total_w99 ~ time, data=rep_data, model='within')
+summary(FE_mod1)
+
+fe.firm <- plm(ahu_total_w99 ~ time, data=rep_data, index = c("countryname", "year"), model='within')
+
+# Fully correct way to get coefficient and standard error unlike summary
+coeftest(fe.firm, vcov=vcovHC(fe.firm, type="sss", cluster="group")) 
+
+
+FE_mod1.1 = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "South Asia"), model='within')
+summary(FE_mod1.1)
+coeftest(FE_mod1.1, vcov=vcovHC(FE_mod1.1, type="sss", cluster="group")) 
+
+FE_mod1.2 = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "East/Southeast Asia"), model='within')
+summary(FE_mod1.2)
+coeftest(FE_mod1.2, vcov=vcovHC(FE_mod1.2, type="sss", cluster="group")) 
+
+
+# on rural
+FE_mod2 = plm(ahu_rural_w99 ~ time, data=rep_data, model='within')
+summary(FE_mod2)
+
+# on urban
+FE_mod3 = plm(ahu_urban_w99 ~ time, data=rep_data, model='within')
+summary(FE_mod3)
+```
+
+
+
+
+
+
+
+
+```{r}
+# ggplots in the paper
+p1 <- rep_data %>%
+  ggplot(aes(x = loggdpcapita, y = ahu_total_w99, color = factor(region))) +
+  geom_point() +
+  geom_smooth(method = loess, aes(group=1)) 
+
+p2 <- rep_data %>%
+  ggplot(aes(x = loggdpcapita, y = ahu_urban_w99, color = factor(region))) +
+  geom_point() +
+  geom_smooth(method = loess, aes(group=1))
+
+p3<- rep_data %>%
+  ggplot(aes(x = loggdpcapita, y = ahu_rural_w99, color = factor(region))) +
+  geom_point() +
+  geom_smooth(method = loess, aes(group=1))
+
+plot_grid(p1, p2, p3)
+```
+
+
+```{r}
+# table 2 replication
+pooled.ols <- plm(formula = delec_total_lowess ~ wb_popdensityK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+
+summary(pooled.ols)
+coeftest(pooled.ols, vcov=vcovDC(pooled.ols, type="sss"))
+
+```
+
+
+```{r}
+# Maps
+
+library(sf)
+library(rgdal)
+library(prevR)
+library(haven)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(rgeos)
+library(ggspatial)
+library(ggrepel)
+library(tidyverse)
+
+library(ggplot2)
+library(ggmap)
+library(maps)
+library(mapdata)
+library(tidyverse)
+
+tmw <- TMWorldBorders
+plot(tmw)
+
+uscoord_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/uscoord.dta") %>%
+  rename(id = "_ID", long = "_X", lat = "_Y")
+
+usdb_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/maps_data.dta") 
+
+electric <- uscoord_df %>% left_join(usdb_df, by = "id") %>%
+  rename(group = id) 
+```
+
+```{r}
+states <- map_data("state")
+class(states)
+
+ggplot(data = states) + 
+  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
+  coord_fixed(1.3) +
+  guides(fill=FALSE)  # do this to leave off the color legend
+
+# Total electrification in 1990
+ggplot(data = electric %>% filter(year == 1990)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+
+
+# Total electrification in 2010
+ggplot(data = electric %>% filter(year == 2010)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")
+
+# Rural electrification in 1990
+ggplot(data = electric %>% filter(year == 1990)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+
+# Rural electrification in 2010
+ggplot(data = electric %>% filter(year == 2010)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+
+# Urban electrification in 1990
+ggplot(data = electric %>% filter(year == 1990)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_urban, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+
+# Urban electrification in 2010
+ggplot(data = electric %>% filter(year == 2010)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_urban, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+```
+
+
+
