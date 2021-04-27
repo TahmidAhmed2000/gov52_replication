@@ -201,7 +201,8 @@ ggplot(data = electric %>% filter(year == 1990)) +
 # Urban electrification in 2010
 ggplot(data = electric %>% filter(year == 2010)) + 
   geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_urban, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") 
+
 ```
 
 
