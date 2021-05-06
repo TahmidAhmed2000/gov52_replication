@@ -2,7 +2,9 @@
 title: "replication"
 author: "Tahmid Ahmed"
 date: "4/12/2021"
-output: html_document
+output:
+  pdf_document: default
+  html_document: default
 ---
 
 ```{r setup, include=FALSE}
@@ -11,7 +13,7 @@ knitr::opts_chunk$set(echo = TRUE)
 
 ## R Markdown
 
-```{r}
+```{r echo=FALSE, message=FALSE, warning=FALSE}
 # Load packages
 library(tidyverse)
 library(ggplot2)
@@ -26,11 +28,12 @@ library(fixest)
 library(cowplot)
 library(foreign)
 library(haven)
+library(lmtest)
 # Set working directory
 setwd("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication")
 ```
 
-```{r}
+```{r echo=FALSE}
 # Load data
 rep_data <- miceadds::load.Rdata2( filename="ReplicationData.Rdata", path = "/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/data" ) 
 ```
@@ -40,66 +43,232 @@ rep_data <- miceadds::load.Rdata2( filename="ReplicationData.Rdata", path = "/Us
 # 	A. Data: summary stats
 ##########################################################################
 
-# #	Summary statistics
-# quiet estpost sum elecrate_total elecrate_rural elecrate_urban ///
-# 	delec_total_lowess delec_rural_lowess delec_urban_lowess	///
-# 	wb_popdensityK ///
-# 	pop_urban_rate rents_ff loghydropowercapitaK polity2 loggdpcap time ///
-# 		if elecrate_total!=. | elecrate_rural!=. | elecrate_urban!=., d
-# esttab using "SummaryStats.tex", ///
-# 	cells("mean(label(Mean) fmt(2)) p50(label(Median) fmt(1)) sd(label(S.D.) fmt(1)) min(label(Min.) fmt(1)) max(label(Max) fmt(1)) count(label(Obs.) fmt(0))") ///
-# 	nonumber label replace noobs	///
-# 	substitute(m$ m\\$)	
-# eststo clear
-
-summary(rep_data)
+# summary(rep_data)
 ```
 
-```{r}
-# wrong so far
-ref1 <- lm.cluster(data = rep_data, formula = ahu_total_w99 ~ time, cluster = "ccode")
-summary(ref1)
-```
 
-```{r} 
+```{r results='asis', echo=FALSE, warning=FALSE} 
+# stargazer(mlog, type="text", results = "asis")
 # correct so far
 
-# on all 
-FE_mod1 = plm(ahu_total_w99 ~ time, data=rep_data, model='within')
-summary(FE_mod1)
+########################## Panel A: Total Electrification based on time ########################
 
-fe.firm <- plm(ahu_total_w99 ~ time, data=rep_data, index = c("countryname", "year"), model='within')
-
-# Fully correct way to get coefficient and standard error unlike summary
-coeftest(fe.firm, vcov=vcovHC(fe.firm, type="sss", cluster="group")) 
-
-
-FE_mod1.1 = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "South Asia"), model='within')
-summary(FE_mod1.1)
-coeftest(FE_mod1.1, vcov=vcovHC(FE_mod1.1, type="sss", cluster="group")) 
-
-FE_mod1.2 = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "East/Southeast Asia"), model='within')
-summary(FE_mod1.2)
-coeftest(FE_mod1.2, vcov=vcovHC(FE_mod1.2, type="sss", cluster="group")) 
+# All countries
+total_all <- plm(ahu_total_w99 ~ time, data=rep_data, index = c("countryname", "year"), model='within')
+coef_total_all <- coeftest(total_all, vcov=vcovHC(total_all, type="sss", cluster="group")) 
+cov_total_all <- vcovHC(total_all, type="sss", cluster="group")
+se_total_all   <- sqrt(diag(cov_total_all))
 
 
-# on rural
-FE_mod2 = plm(ahu_rural_w99 ~ time, data=rep_data, model='within')
-summary(FE_mod2)
+# East/Southeast Asia
+total_esa = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "East/Southeast Asia"), model='within')
+coef_total_esa <- coeftest(total_esa, vcov=vcovHC(total_esa, type="sss", cluster="group")) 
+cov_total_esa <- vcovHC(total_esa, type="sss", cluster="group")
+se_total_esa   <- sqrt(diag(cov_total_esa))
 
-# on urban
-FE_mod3 = plm(ahu_urban_w99 ~ time, data=rep_data, model='within')
-summary(FE_mod3)
+
+# Latin America
+total_la = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "Latin America & Caribbean"), model='within')
+coef_total_la <- coeftest(total_la, vcov=vcovHC(total_la, type="sss", cluster="group"))
+cov_total_la <- vcovHC(total_la, type="sss", cluster="group")
+se_total_la   <- sqrt(diag(cov_total_la))
+
+
+# Middle East/N Africa
+total_mena = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "Middle East & North Africa"), model='within')
+coef_total_mena <- coeftest(total_mena, vcov=vcovHC(total_mena, type="sss", cluster="group"))
+cov_total_mena <- vcovHC(total_mena, type="sss", cluster="group")
+se_total_mena   <- sqrt(diag(cov_total_mena))
+
+
+# South Asia
+total_sa = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "South Asia"), model='within')
+coef_total_sa <- coeftest(total_sa, vcov=vcovHC(total_sa, type="sss", cluster="group"))
+cov_total_sa <- vcovHC(total_sa, type="sss", cluster="group")
+se_total_sa   <- sqrt(diag(cov_total_sa))
+
+
+# Sub-Saharan Africa	
+total_ssa = plm(ahu_total_w99 ~ time, data=rep_data %>% filter(region == "Sub-Saharan Africa"), model='within')
+coef_total_ssa <- coeftest(total_ssa, vcov=vcovHC(total_ssa, type="sss", cluster="group"))
+cov_total_ssa <- vcovHC(total_ssa, type="sss", cluster="group")
+se_total_ssa   <- sqrt(diag(cov_total_ssa))
+
+
+stargazer(total_all, total_esa, total_la, total_mena,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_total_all, se_total_esa, se_total_la, se_total_mena),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate"
+)
+
+stargazer(total_sa, total_ssa,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          column.labels=c("SA", "SSA"), 
+          se = list(se_total_sa, se_total_ssa),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate Cont."
+)
+
+
+
+```
+
+
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Panel B: Rural Electrification based on time ########################
+
+# All countries
+rural_all <- plm(ahu_rural_w99 ~ time, data=rep_data, index = c("countryname", "year"), model='within')
+coef_rural_all <- coeftest(rural_all, vcov=vcovHC(rural_all, type="sss", cluster="group")) 
+cov_rural_all <- vcovHC(rural_all, type="sss", cluster="group")
+se_rural_all   <- sqrt(diag(cov_rural_all))
+
+
+# East/Southeast Asia
+rural_esa = plm(ahu_rural_w99 ~ time, data=rep_data %>% filter(region == "East/Southeast Asia"), model='within')
+coef_rural_esa <- coeftest(rural_esa, vcov=vcovHC(rural_esa, type="sss", cluster="group")) 
+cov_rural_esa <- vcovHC(rural_esa, type="sss", cluster="group")
+se_rural_esa   <- sqrt(diag(cov_rural_esa))
+
+
+# Latin America
+rural_la = plm(ahu_rural_w99 ~ time, data=rep_data %>% filter(region == "Latin America & Caribbean"), model='within')
+coef_rural_la <- coeftest(rural_la, vcov=vcovHC(rural_la, type="sss", cluster="group"))
+cov_rural_la <- vcovHC(rural_la, type="sss", cluster="group")
+se_rural_la   <- sqrt(diag(cov_rural_la))
+
+
+# Middle East/N Africa
+rural_mena = plm(ahu_rural_w99 ~ time, data=rep_data %>% filter(region == "Middle East & North Africa"), model='within')
+coef_rural_mena <- coeftest(rural_mena, vcov=vcovHC(rural_mena, type="sss", cluster="group"))
+cov_rural_mena <- vcovHC(rural_mena, type="sss", cluster="group")
+se_rural_mena   <- sqrt(diag(cov_rural_mena))
+
+
+# South Asia
+rural_sa = plm(ahu_rural_w99 ~ time, data=rep_data %>% filter(region == "South Asia"), model='within')
+coef_rural_sa <- coeftest(rural_sa, vcov=vcovHC(rural_sa, type="sss", cluster="group"))
+cov_rural_sa <- vcovHC(rural_sa, type="sss", cluster="group")
+se_rural_sa   <- sqrt(diag(cov_rural_sa))
+
+
+# Sub-Saharan Africa	
+rural_ssa = plm(ahu_rural_w99 ~ time, data=rep_data %>% filter(region == "Sub-Saharan Africa"), model='within')
+coef_rural_ssa <- coeftest(rural_ssa, vcov=vcovHC(rural_ssa, type="sss", cluster="group"))
+cov_rural_ssa <- vcovHC(rural_ssa, type="sss", cluster="group")
+se_rural_ssa   <- sqrt(diag(cov_rural_ssa))
+
+
+stargazer(rural_all, rural_esa, rural_la, rural_mena,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Rural Electrification Rate",
+          # results = "asis", 
+          column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_rural_all, se_rural_esa, se_rural_la, se_rural_mena),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Rural Electrification Rate"
+)
+
+stargazer(rural_sa, rural_ssa,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Rural Electrification Rate",
+          # results = "asis", 
+          column.labels=c("SA", "SSA"), 
+          se = list(se_rural_sa, se_rural_ssa),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Rural Electrification Rate Cont."
+)
+```
+
+
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Panel C: Urban Electrification based on time ########################
+
+# All countries
+urban_all <- plm(ahu_urban_w99 ~ time, data=rep_data, index = c("countryname", "year"), model='within')
+coef_urban_all <- coeftest(urban_all, vcov=vcovHC(urban_all, type="sss", cluster="group")) 
+cov_urban_all <- vcovHC(urban_all, type="sss", cluster="group")
+se_urban_all   <- sqrt(diag(cov_urban_all))
+
+
+# East/Southeast Asia
+urban_esa = plm(ahu_urban_w99 ~ time, data=rep_data %>% filter(region == "East/Southeast Asia"), model='within')
+coef_urban_esa <- coeftest(urban_esa, vcov=vcovHC(urban_esa, type="sss", cluster="group")) 
+cov_urban_esa <- vcovHC(urban_esa, type="sss", cluster="group")
+se_urban_esa   <- sqrt(diag(cov_urban_esa))
+
+
+# Latin America
+urban_la = plm(ahu_urban_w99 ~ time, data=rep_data %>% filter(region == "Latin America & Caribbean"), model='within')
+coef_urban_la <- coeftest(urban_la, vcov=vcovHC(urban_la, type="sss", cluster="group"))
+cov_urban_la <- vcovHC(urban_la, type="sss", cluster="group")
+se_urban_la   <- sqrt(diag(cov_urban_la))
+
+
+# Middle East/N Africa
+urban_mena = plm(ahu_urban_w99 ~ time, data=rep_data %>% filter(region == "Middle East & North Africa"), model='within')
+coef_urban_mena <- coeftest(urban_mena, vcov=vcovHC(urban_mena, type="sss", cluster="group"))
+cov_urban_mena <- vcovHC(urban_mena, type="sss", cluster="group")
+se_urban_mena   <- sqrt(diag(cov_urban_mena))
+
+
+# South Asia
+urban_sa = plm(ahu_urban_w99 ~ time, data=rep_data %>% filter(region == "South Asia"), model='within')
+coef_urban_sa <- coeftest(urban_sa, vcov=vcovHC(urban_sa, type="sss", cluster="group"))
+cov_urban_sa <- vcovHC(urban_sa, type="sss", cluster="group")
+se_urban_sa   <- sqrt(diag(cov_urban_sa))
+
+
+# Sub-Saharan Africa	
+urban_ssa = plm(ahu_urban_w99 ~ time, data=rep_data %>% filter(region == "Sub-Saharan Africa"), model='within')
+coef_urban_ssa <- coeftest(urban_ssa, vcov=vcovHC(urban_ssa, type="sss", cluster="group"))
+cov_urban_ssa <- vcovHC(urban_ssa, type="sss", cluster="group")
+se_urban_ssa   <- sqrt(diag(cov_urban_ssa))
+
+
+stargazer(urban_all, urban_esa, urban_la, urban_mena,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Urban Electrification Rate",
+          # results = "asis", 
+          column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_urban_all, se_urban_esa, se_urban_la, se_urban_mena),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for urban Electrification Rate"
+)
+
+stargazer(urban_sa, urban_ssa,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Urban Electrification Rate",
+          # results = "asis", 
+          column.labels=c("SA", "SSA"), 
+          se = list(se_urban_sa, se_urban_ssa),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for urban Electrification Rate Cont."
+)
 ```
 
 
 
 
-
-
-
-
-```{r}
+```{r, echo=FALSE, warning=FALSE}
 # ggplots in the paper
 p1 <- rep_data %>%
   ggplot(aes(x = loggdpcapita, y = ahu_total_w99, color = factor(region))) +
@@ -116,23 +285,279 @@ p3<- rep_data %>%
   geom_point() +
   geom_smooth(method = loess, aes(group=1))
 
-plot_grid(p1, p2, p3)
 ```
 
 
-```{r}
-# table 2 replication
-pooled.ols <- plm(formula = delec_total_lowess ~ wb_popdensityK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
 
-summary(pooled.ols)
-coeftest(pooled.ols, vcov=vcovDC(pooled.ols, type="sss"))
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Table 2. Panel A: Total Electrification on  ########################
+
+# Population Density
+total1 <- plm(formula = delec_total_lowess ~ wb_popdensityK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total1 <- coeftest(total1, vcov=vcovHC(total1, type="sss", cluster="group")) 
+cov_total1 <- vcovHC(total1, type="sss", cluster="group")
+se_total1   <- sqrt(diag(cov_total1))
+
+# Urban pop. share
+total2 <- plm(formula = delec_total_lowess ~ pop_urban_rate + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total2 <- coeftest(total2, vcov=vcovHC(total2, type="sss", cluster="group")) 
+cov_total2 <- vcovHC(total2, type="sss", cluster="group")
+se_total2   <- sqrt(diag(cov_total2))
+
+# Hydro Potential per Capita (log) (kWh/k)
+total3 <- plm(formula = delec_total_lowess ~ loghydropowercapitaK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total3 <- coeftest(total3, vcov=vcovHC(total3, type="sss", cluster="group")) 
+cov_total3 <- vcovHC(total3, type="sss", cluster="group")
+se_total3   <- sqrt(diag(cov_total3))
+
+# Oil, Gas, Coal Rents (% of GDP)
+total4 <- plm(formula = delec_total_lowess ~ rents_ff + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total4 <- coeftest(total4, vcov=vcovHC(total4, type="sss", cluster="group")) 
+cov_total4 <- vcovHC(total4, type="sss", cluster="group")
+se_total4   <- sqrt(diag(cov_total4))
+
+# Nat. Resource Rents (% of GDP)
+total5 <- plm(formula = delec_total_lowess ~ wb_natres_rents + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total5 <- coeftest(total5, vcov=vcovHC(total5, type="sss", cluster="group")) 
+cov_total5 <- vcovHC(total5, type="sss", cluster="group")
+se_total5   <- sqrt(diag(cov_total5))
+
+# Democracy
+total6 <- plm(formula = delec_total_lowess ~ polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total6 <- coeftest(total6, vcov=vcovHC(total6, type="sss", cluster="group")) 
+cov_total6 <- vcovHC(total6, type="sss", cluster="group")
+se_total6   <- sqrt(diag(cov_total6))
+
+# Every predictor
+total7 <- plm(formula = delec_total_lowess ~ wb_popdensityK + pop_urban_rate + loghydropowercapitaK+ rents_ff + wb_natres_rents + polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_total7 <- coeftest(total7, vcov=vcovHC(total7, type="sss", cluster="group")) 
+cov_total7 <- vcovHC(total7, type="sss", cluster="group")
+se_total7   <- sqrt(diag(cov_total7))
+
+stargazer(total1, total2, total3, 
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_total1, se_total2, se_total3),
+          column.sep.width = "2pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Time")
+)
+
+stargazer(total4, total5, total6,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_total4, se_total5, se_total6),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate Cont.",
+          covariate.labels = c("Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
+
+stargazer(total7,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_total7),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate Cont.",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
 
 ```
 
 
-```{r}
-# Maps
 
+
+
+
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Table 2. Panel B: Rural Electrification on  ########################
+
+# Population Density
+rural1 <- plm(formula = delec_rural_lowess ~ wb_popdensityK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural1 <- coeftest(rural1, vcov=vcovHC(rural1, type="sss", cluster="group")) 
+cov_rural1 <- vcovHC(rural1, type="sss", cluster="group")
+se_rural1   <- sqrt(diag(cov_rural1))
+
+# Urban pop. share
+rural2 <- plm(formula = delec_rural_lowess ~ pop_urban_rate + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural2 <- coeftest(rural2, vcov=vcovHC(rural2, type="sss", cluster="group")) 
+cov_rural2 <- vcovHC(rural2, type="sss", cluster="group")
+se_rural2   <- sqrt(diag(cov_rural2))
+
+# Hydro Potential per Capita (log) (kWh/k)
+rural3 <- plm(formula = delec_rural_lowess ~ loghydropowercapitaK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural3 <- coeftest(rural3, vcov=vcovHC(rural3, type="sss", cluster="group")) 
+cov_rural3 <- vcovHC(rural3, type="sss", cluster="group")
+se_rural3   <- sqrt(diag(cov_rural3))
+
+# Oil, Gas, Coal Rents (% of GDP)
+rural4 <- plm(formula = delec_rural_lowess ~ rents_ff + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural4 <- coeftest(rural4, vcov=vcovHC(rural4, type="sss", cluster="group")) 
+cov_rural4 <- vcovHC(rural4, type="sss", cluster="group")
+se_rural4   <- sqrt(diag(cov_rural4))
+
+# Nat. Resource Rents (% of GDP)
+rural5 <- plm(formula = delec_rural_lowess ~ wb_natres_rents + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural5 <- coeftest(rural5, vcov=vcovHC(rural5, type="sss", cluster="group")) 
+cov_rural5 <- vcovHC(rural5, type="sss", cluster="group")
+se_rural5   <- sqrt(diag(cov_rural5))
+
+# Democracy
+rural6 <- plm(formula = delec_rural_lowess ~ polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural6 <- coeftest(rural6, vcov=vcovHC(rural6, type="sss", cluster="group")) 
+cov_rural6 <- vcovHC(rural6, type="sss", cluster="group")
+se_rural6   <- sqrt(diag(cov_rural6))
+
+# Every predictor
+rural7 <- plm(formula = delec_rural_lowess ~ wb_popdensityK + pop_urban_rate + loghydropowercapitaK+ rents_ff + wb_natres_rents + polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_rural7 <- coeftest(rural7, vcov=vcovHC(rural7, type="sss", cluster="group")) 
+cov_rural7 <- vcovHC(rural7, type="sss", cluster="group")
+se_rural7   <- sqrt(diag(cov_rural7))
+
+stargazer(rural1, rural2, rural3,
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Rural Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_rural1, se_rural2, se_rural3),
+          column.sep.width = "2pt",
+          font.size = "small",
+          title = "Regression Results for rural Electrification Rate",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Time")
+)
+
+stargazer(rural4, rural5, rural6,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Rural Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_rural4, se_rural5, se_rural6),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Rural Electrification Rate Cont.",
+          covariate.labels = c("Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
+
+stargazer(rural7,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Rural Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_rural7),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Rural Electrification Rate Cont.",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
+
+```
+
+
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Table 2. Panel B: Urban Electrification on  ########################
+
+# Population Density
+urban1 <- plm(formula = delec_urban_lowess ~ wb_popdensityK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban1 <- coeftest(urban1, vcov=vcovHC(urban1, type="sss", cluster="group")) 
+cov_urban1 <- vcovHC(urban1, type="sss", cluster="group")
+se_urban1   <- sqrt(diag(cov_urban1))
+
+# Urban pop. share
+urban2 <- plm(formula = delec_urban_lowess ~ pop_urban_rate + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban2 <- coeftest(urban2, vcov=vcovHC(urban2, type="sss", cluster="group")) 
+cov_urban2 <- vcovHC(urban2, type="sss", cluster="group")
+se_urban2   <- sqrt(diag(cov_urban2))
+
+# Hydro Potential per Capita (log) (kWh/k)
+urban3 <- plm(formula = delec_urban_lowess ~ loghydropowercapitaK + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban3 <- coeftest(urban3, vcov=vcovHC(urban3, type="sss", cluster="group")) 
+cov_urban3 <- vcovHC(urban3, type="sss", cluster="group")
+se_urban3   <- sqrt(diag(cov_urban3))
+
+# Oil, Gas, Coal Rents (% of GDP)
+urban4 <- plm(formula = delec_urban_lowess ~ rents_ff + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban4 <- coeftest(urban4, vcov=vcovHC(urban4, type="sss", cluster="group")) 
+cov_urban4 <- vcovHC(urban4, type="sss", cluster="group")
+se_urban4   <- sqrt(diag(cov_urban4))
+
+# Nat. Resource Rents (% of GDP)
+urban5 <- plm(formula = delec_urban_lowess ~ wb_natres_rents + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban5 <- coeftest(urban5, vcov=vcovHC(urban5, type="sss", cluster="group")) 
+cov_urban5 <- vcovHC(urban5, type="sss", cluster="group")
+se_urban5   <- sqrt(diag(cov_urban5))
+
+# Democracy
+urban6 <- plm(formula = delec_urban_lowess ~ polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban6 <- coeftest(urban6, vcov=vcovHC(urban6, type="sss", cluster="group")) 
+cov_urban6 <- vcovHC(urban6, type="sss", cluster="group")
+se_urban6   <- sqrt(diag(cov_urban6))
+
+# Every predictor
+urban7 <- plm(formula = delec_urban_lowess ~ wb_popdensityK + pop_urban_rate + loghydropowercapitaK+ rents_ff + wb_natres_rents + polity2 + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_urban7 <- coeftest(urban7, vcov=vcovHC(urban7, type="sss", cluster="group")) 
+cov_urban7 <- vcovHC(urban7, type="sss", cluster="group")
+se_urban7   <- sqrt(diag(cov_urban7))
+
+stargazer(urban1, urban2, urban3,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Urban Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_urban1, se_urban2, se_urban3), 
+          column.sep.width = "2pt",
+          font.size = "small",
+          title = "Regression Results for urban Electrification Rate",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Time")
+)
+
+stargazer(urban4, urban5, urban6,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Urban Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_urban4, se_urban5, se_urban6),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for urban Electrification Rate Cont.",
+          covariate.labels = c("Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
+
+stargazer(urban7,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Urban Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_urban7),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for urban Electrification Rate Cont.",
+          covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
+)
+
+```
+
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+############################################### Maps #########################################
+
+# load libraries for maps part
 library(sf)
 library(rgdal)
 library(prevR)
@@ -144,15 +569,15 @@ library(rgeos)
 library(ggspatial)
 library(ggrepel)
 library(tidyverse)
-
 library(ggplot2)
 library(ggmap)
 library(maps)
 library(mapdata)
 library(tidyverse)
 
+# Read data
 tmw <- TMWorldBorders
-plot(tmw)
+# plot(tmw)
 
 uscoord_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/uscoord.dta") %>%
   rename(id = "_ID", long = "_X", lat = "_Y")
@@ -163,20 +588,11 @@ electric <- uscoord_df %>% left_join(usdb_df, by = "id") %>%
   rename(group = id) 
 ```
 
-```{r}
-states <- map_data("state")
-class(states)
-
-ggplot(data = states) + 
-  geom_polygon(aes(x = long, y = lat, fill = region, group = group), color = "white") + 
-  coord_fixed(1.3) +
-  guides(fill=FALSE)  # do this to leave off the color legend
-
+```{r echo=FALSE}
 # Total electrification in 1990
 ggplot(data = electric %>% filter(year == 1990)) + 
   geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
-
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") 
 
 # Total electrification in 2010
 ggplot(data = electric %>% filter(year == 2010)) + 
