@@ -1,17 +1,32 @@
 ---
-title: "replication"
+title: "Replication"
 author: "Tahmid Ahmed"
 date: "4/12/2021"
 output:
   pdf_document: default
   html_document: default
+header-includes: \usepackage{float}
 ---
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-## R Markdown
+## Introduction
+For my replication project, I will be replicating the results from “A global analysis of progress in household electrification” by Alkin et al. (2018). This paper focuses on the United Nations Sustainable Development Goal (SDG) #7, which strives for access to affordable, sustainable, and modern energy. The authors emphasize that access to energy is crucial to human well-being as literature highlights that low-cost electricity and clean energy can lead to healthier and more productive lives (Dinkelman, 2011; Barnes, 2014; Greenstone, 2014; Aklin et al., 2016). The authors note that the World Bank currently has a data set that measures progress in energy over time called the Global Tracking Framework (GTF). However, even though the data set is ground breaking in terms of measuring progress towards universal access to energy, the data lacks a robust baseline for national electrification rates across the globe since the data on rural electrification rates are very poor. The data is also not only incomplete and only available for the post-1990 period but also consists of multiple values that are based on simulation or interpolation. The authors further argue that in order to understand how to achieve universal access to electricity, scientists and policymakers must compare changes in total and urban electrification rates to that of rural electrification rates based on high-quality data and learn from past successes and failures. Thus, the main research question the authors are answering is: How can we better understand progress toward universal electricity access with high-quality data? To address this question, the authors introduced a new database of total, urban, and rural electrification rates around the world. This database uses nationally representative surveys and official reports from 124 countries. It is also the most detailed data set on electrification to date as it does not have data based on simulations, has data for the pre-1990 period, and includes clear coding criteria. 
+
+The authors went through a rigorous process to create the data. The authors use a multitude of sources to create the database, including the national census where available, nationally represented surveys that asked questions about electricity access, published journal articles, and government agency statistics. The database consists of 1065 observations for 124 countries across 15 different regions in Asia, Africa, Latin America, Middle East, Eastern Europe and the Caribbean between years 1949–2015. The database would also have other variables, such as polity scores, urban population share, and hydro potential. 
+
+Additionally, the authors ran a coherent analysis on the data to explore global electrification trends. In their first model, the authors made a linear model with least squares (OLS) and standard errors clustered by country. The dependent variable was electrification rate and the predictor was time. They found that their results are robust. Moreover, to examine the variation in pace of electrification, they first plotted the relationship between logarithmized GDP per capita (USD, 2010 constant prices) and rural or total electrification rates. They then used a generalized linear model to explore the nonlinear relationship. Thus, in their second model, they also made another linear model. The model used the following covariates- Population Density (k/sqkm); Urban Pop. Share; Hydro Potential per Capita (log) (kWh/k); Oil, Gas, Coal Rents (% of GDP); Nat. Resource Rents (% of GDP); and Democracy. The dependent variable was then  deviations from the electrification rates predicted by logarithmized GDP per capita alone. The results showed that high population densities are a robust predictor of electrification rates totally and rurally. 
+
+Moreover, the paper concluded that previous estimates of progress toward universal electrification over time are very underestimated due to data caused from stimulations. They have also concluded that total, rural, and urban electrification rates have increased dramatically in the world. Last but not least, they also concluded that while GDP per capita is a strong predictor of electrification rates, urbanization and high population densities have also explained that some poor countries are able to improve their electrification rates at a quick rate. 
+
+In my replication, I have replicated all models in the paper using R. I was able to have the same conclusions and used different libraries, specifically plm, to make models with fixed effects and clustered standard errors. I also made similar maps and plots using ggplot. From my replication, I was able to conclude very similar results as the authors. An additional conclusion I made is that in addition to population density, natural resource rents (% of GDP) is a significant predictor in the second model with a p-value less than 0.05. This might be because regions with better economies are able to better afford technological advancements for access to electricity. Moreover, another conclusion I made was that even though many countries had higher electrification rates over time, access to electricity is very segregated in many continents and it is important that policymakers and scientists address this segregation for better wellbeing among all people. I also expanded ………. 
+The implications are that the United Nations and countries can learn from the results of this project, and inform better policies in terms of helping regions, especially those from rural areas, get better access to electricity. 
+
+
+\newpage  
+
 
 ```{r echo=FALSE, message=FALSE, warning=FALSE}
 # Load packages
@@ -38,7 +53,7 @@ setwd("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication")
 rep_data <- miceadds::load.Rdata2( filename="ReplicationData.Rdata", path = "/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/data" ) 
 ```
 
-```{r}
+```{r echo=FALSE}
 ##########################################################################
 # 	A. Data: summary stats
 ##########################################################################
@@ -46,10 +61,77 @@ rep_data <- miceadds::load.Rdata2( filename="ReplicationData.Rdata", path = "/Us
 # summary(rep_data)
 ```
 
+## Walk Through and Analysis of Replication
+In our analysis, we will first explore trends in global electrification. To do so, I replicated the maps in the journal. These plots essentially depict progress in overall electrification globally. To create the plots, I had to use ggplot. I first read data for replication. The uscoord_df refers to the geographic coordinates of countries and comes from the TM World Borders Dataset 0.3 (cite), which is a dataset that contains geographic information about countries and meant to be used for the public. I also read usdb_df, which contains the electrification rates of countries and provided by the authors. I then joined both data sets (by country name), which made an object called electric to create ggplots. Moreover, once I had the object named electric, I created maps using geom_polygon. With geom_polygon I am essentially able to make shapes and since the joined data set has all the geographical coordinates for each country, I can make shapes of countries. Thus, I used ggplot with x is longitude and y is latitude and filled shapes based on electrification rates. The results were essentially the same as the paper. 
+
+```{r echo=FALSE, message=FALSE, warning=FALSE}
+############################################### Maps #########################################
+
+# load libraries for maps part
+library(sf)
+library(rgdal)
+library(prevR)
+library(haven)
+library(sf)
+library(rnaturalearth)
+library(rnaturalearthdata)
+library(rgeos)
+library(ggspatial)
+library(ggrepel)
+library(ggmap)
+library(maps)
+library(mapdata)
+
+# Read data
+tmw <- TMWorldBorders
+# plot(tmw)
+
+uscoord_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/uscoord.dta") %>%
+  rename(id = "_ID", long = "_X", lat = "_Y")
+
+usdb_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/maps_data.dta") 
+
+electric <- uscoord_df %>% left_join(usdb_df, by = "id") %>%
+  rename(group = id) 
+```
+
+```{r echo=FALSE, out.width="50%"}
+# Total electrification in 1990
+ggplot(data = electric %>% filter(year == 1990)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 1a. 1986-1994", fill = "Total Electrification Rate")
+
+# Total electrification in 2010
+ggplot(data = electric %>% filter(year == 2010)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 1b. 2006-2014", fill = "Total Electrification Rate")
+
+# Rural electrification in 1990
+ggplot(data = electric %>% filter(year == 1990)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 2a. 1986-1994", fill = "Rural Electrification Rate") 
+
+# Rural electrification in 2010
+ggplot(data = electric %>% filter(year == 2010)) + 
+  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 2b. 2006-2014", fill = "Rural Electrification Rate")
+```
+
+
+Figure 1a and Figure 1b show the electrification rate during around 1990 while Figure 2a and Figure 2b show the electrification rate at around 2010. Based on the first pair of maps, we can see that total electrification rates have increased across all regions over time. Additionally, based on these maps, Latin America, Asia, and the Middle East and North Africa seem to be reaching universal electrification while Sub-Saharan Africa is slowly behind. For the second pair of maps, we can see similar results for rural electrification rates. While there is less data in 1990 for rural electrification rates, especially in Africa, we can still see a dramatic increase in Latin America and some progress in other nations. Moreover, Sub-Saharan Africa still seems to be lacking in progress in rural electrification rates as not much has changed since 1990. 
+
+\newpage
+
+Now that we have our maps, we can first analyze our first model. In our first model, we are using a linear regression to predict progress in total, rural, and urban electrification rates over time. The electrification rate is regressed on country-specific intercepts, including country fixed effects, and on a linear time trend. Standard errors are clustered by country as well. Tables 1-6 pertain to different regions, including all regions, and based on data created by the authors. Table 7 pertains to the World Bank GTF data. E/SE Asia stands for East/Southeast Asia. LA stands for Latin America. MENA stands for Middle East and North Africa. SA stands for South Asia and SSA stands for Sub-Saharan Africa. 
+
+In R, I used the plm package to create my models. Since we are looking at data across different cross sections of time or essentially panel data, I used the plm function to make my models. The plm package allows you to make linear models that have panel data. Moreover, I also used plm because this is a fixed effects regression model. In the plm function, the fixed effects estimator is also called the within estimator, so I set model = ‘within’. Now I can make the fixed effects regression. Moreover, since standard errors are clustered by country, we can use vcovHC on the model from the sandwich package to extract the covariance of the coefficient estimates in the model and set cluster = “group” to cluster by country. I then found the square root of the covariance in order to get the standard error. I repeated this process for each type of electrification rate and for different regions, including all regions. I also repeated this process based on data from the World Bank. Stargazer was used to make the respective tables. The results were nearly identical to that of the paper. 
+
 
 ```{r results='asis', echo=FALSE, warning=FALSE} 
-# stargazer(mlog, type="text", results = "asis")
-# correct so far
 
 ########################## Panel A: Total Electrification based on time ########################
 
@@ -120,9 +202,9 @@ stargazer(total_sa, total_ssa,
 )
 
 
-
 ```
 
+\newpage
 
 ```{r results='asis', echo=FALSE, warning=FALSE}
 ########################## Panel B: Rural Electrification based on time ########################
@@ -194,6 +276,7 @@ stargazer(rural_sa, rural_ssa,
 )
 ```
 
+\newpage
 
 ```{r results='asis', echo=FALSE, warning=FALSE}
 ########################## Panel C: Urban Electrification based on time ########################
@@ -249,7 +332,7 @@ stargazer(urban_all, urban_esa, urban_la, urban_mena,
           se = list(se_urban_all, se_urban_esa, se_urban_la, se_urban_mena),
           column.sep.width = "3pt",
           font.size = "small",
-          title = "Regression Results for urban Electrification Rate"
+          title = "Regression Results for Urban Electrification Rate"
 )
 
 stargazer(urban_sa, urban_ssa,  
@@ -261,33 +344,92 @@ stargazer(urban_sa, urban_ssa,
           se = list(se_urban_sa, se_urban_ssa),
           column.sep.width = "3pt",
           font.size = "small",
-          title = "Regression Results for urban Electrification Rate Cont."
+          title = "Regression Results for Urban Electrification Rate Cont."
 )
 ```
 
+```{r results='asis', echo=FALSE, warning=FALSE}
+########################## Panel A: Electrification based on time using WB ######################
+# wb all countries
+total_wb <- plm(wb_total_w99 ~ time, data=rep_data %>% filter(ahu_total_sample==1), index = c("countryname", "year"), model='within')
+coef_total_wb <- coeftest(total_wb, vcov=vcovHC(total_wb, type="sss", cluster="group")) 
+cov_total_wb <- vcovHC(total_wb, type="sss", cluster="group")
+se_total_wb   <- sqrt(diag(cov_total_wb))
+
+# wb rural
+rural_wb <- plm(wb_rural_w99 ~ time, data=rep_data %>% filter(ahu_rural_sample==1), index = c("countryname", "year"), model='within')
+coef_rural_wb <- coeftest(rural_wb, vcov=vcovHC(rural_wb, type="sss", cluster="group")) 
+cov_rural_wb <- vcovHC(rural_wb, type="sss", cluster="group")
+se_rural_wb   <- sqrt(diag(cov_rural_wb))
+
+# wb urban
+urban_wb <- plm(wb_urban_w99 ~ time, data=rep_data %>% filter(ahu_urban_sample==1), index = c("countryname", "year"), model='within')
+coef_urban_wb <- coeftest(urban_wb, vcov=vcovHC(urban_wb, type="sss", cluster="group")) 
+cov_urban_wb <- vcovHC(urban_wb, type="sss", cluster="group")
+se_urban_wb   <- sqrt(diag(cov_urban_wb))
 
 
 
-```{r, echo=FALSE, warning=FALSE}
+
+stargazer(total_wb, rural_wb, urban_wb, 
+          type="latex",
+          header = FALSE,
+          dep.var.labels = c("Total Electrification Rate", "Rural Electrification Rate", "Urban Electrification Rate"),
+          # results = "asis", 
+          column.labels=c("All", "Rural", "Urban"), 
+          se = list(se_total_wb, se_rural_wb, se_urban_wb),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results for Total Electrification Rate (WB)"
+)
+```
+
+The results of the models were very telling. The coefficients represent “the average annual change in the percentage of electrified households/populations” (Aklin et al., 2018). Thus, we can see that the World Bank greatly underestimates progress in electrification in terms of total, rural, and urban electrification. For example, the rate of progress for total electrification (coefficient is 1.30) is about 28% higher than the coefficient (coefficient is .02) in the model using World Bank data. Likewise, the rate of progress for rural electrification (coefficient is 1.51) is about 53% higher than the coefficient (coefficient is .98) in the model using World Bank data. However, the coefficient for urban electrification rate is about the same for both models using the author’s data and the model using the World Bank simulations. Thus, based on the World Bank model, data with simulations seem to underestimate the rate of improvement in electrification whereas data without simulations have a much more positive effect. Additionally, the model shows that Sub-Saharan Africa made a lot less improvement in electrification compared to other regions. In fact, Latin America, which also has impoverished areas, has a higher coefficient for total electrification (1.08)  compared to Sub-Saharan Africa (.99) but only slightly. However, Sub-Saharan Africa has shown to be the only region where urban electrification has made faster progress than that of rural electrification whereas all other regions had the opposite. This could be because regions outside of Sub-Saharan already have high urban electrification rates so they won’t see much improvement. Another key finding is that all the models are significant where the time predictor has a p-value less than 0.05, indicating that electrification does seem to be changing over time. Also, the fact that the Middle East and North Africa has a lot higher coefficients for both total electrification rates and rural electrification rates than Sub-Saharan Africa shows that Africa is very divided in terms of progress in electrification. It would be interesting to examine why this difference is apparent between the northern and southern parts of Africa. One reason is that Sub-Saharan Africa is isolated from the world and may not be exposed to technological measures for access to more electricity. 
+
+We further analyze variation in the pace of electrification in the world. Based on the paper, one reason that there is variation in the pace of electrification is that there is a strong relationship between economic growth and electrification (Barnes, 2014; Greenstone, 2014). Moreover, studies have also shown that electrification may be higher for higher income households since they can afford electricity (Foley, 1992). Thus, the authors looked to create a baseline by plotting logarithmized GDP per capita (USD, 2010 constant prices and based on general additive model) on the x axis versus electrification rate (total, rural, urban) on the y axis.  In R, I used ggplot to create these plots with the same axes shown in Figure 3. Moreover, since the authors added a loess smoothing function to see the nonlinear effect of GDP per capita, I added method = loess to geom_smooth. I colored the points by region like the paper and got essentially very similar results. 
+
+\newpage
+
+```{r, echo=FALSE, warning=FALSE, message=FALSE, out.width="50%"}
 # ggplots in the paper
 p1 <- rep_data %>%
   ggplot(aes(x = loggdpcapita, y = ahu_total_w99, color = factor(region))) +
   geom_point() +
-  geom_smooth(method = loess, aes(group=1)) 
+  geom_smooth(method = loess, aes(group=1)) +
+  labs(caption = "Figure 3a", title = "Total Electrification") +
+  theme(legend.title = element_blank()) +
+  xlab("GDP per capita (log)") +
+  ylab("Electrification Rate")
+p1
 
 p2 <- rep_data %>%
   ggplot(aes(x = loggdpcapita, y = ahu_urban_w99, color = factor(region))) +
   geom_point() +
-  geom_smooth(method = loess, aes(group=1))
+  geom_smooth(method = loess, aes(group=1)) +
+  labs(caption = "Figure 3b", title = "Urban Electrification") +
+  theme(legend.title = element_blank()) +
+  xlab("GDP per capita (log)") +
+  ylab("Electrification Rate")
+p2
 
 p3<- rep_data %>%
   ggplot(aes(x = loggdpcapita, y = ahu_rural_w99, color = factor(region))) +
   geom_point() +
-  geom_smooth(method = loess, aes(group=1))
-
+  geom_smooth(method = loess, aes(group=1)) +
+  labs(caption = "Figure 3c", title = "Rural Electrification") +
+  theme(legend.title = element_blank()) +
+  xlab("GDP per capita (log)") +
+  ylab("Electrification Rate")
+p3
 ```
 
+Based on Figure 3, the relationship between logarithmized GDP per capita and electrification is robust. In both rural total electrification plots, electrification rates seem to be increasing dramatically with income. However, as the authors noted, there is also variation in the predicted relationship based on the general additive model in that countries tend to underperform or over perform when GDP per capita is neither very high nor very low. 
 
+With these trends, the authors create their second type of model. The authors consider the covariates that may predict the deviations from the pattern predicted by GDP per capita alone. Thus, “the dependent variable in the new model is deviation from the value predicted by logarithmized GDP per capita,” which is measured by “observed (total, rural, or urban)  electrification rate less the expected electrification rate based on logarithmized GDP per capita.” Additionally, the authors looked at the following possible predictors that may explain the over performance or underperformance - population density since it can reduce the cost of household electrification (Oparaku, 2003); natural resource rents since they can provide funds for national electrification programs (Squalli, 2007); and democracy since democratic countries have stronger incentives to provide electricity to households in comparison to authoritarian governments (Min, 2015). They examine the extent of these predictors on the dependent variable of this model to explain the “divergence in the degree of total, rural, and urban electrification across the world” (Alkin et al., 2018). 
+
+To replicate their models, I had to use plm for the same reasons as to why I used plm for the first type of model. However, I used method = "pooling" here as this is essentially a pooled regression now. Since this model also had standard errors clustered by country, I essentially did the same thing as before. The models differ by the inclusion and exclusion of the unique predictors and the last model includes all explanatory variables. Tables 8 through 16 show the results of the models where Tables 10, 13, and 16 include all predictors. 
+
+\newpage
 
 ```{r results='asis', echo=FALSE, warning=FALSE}
 ########################## Table 2. Panel A: Total Electrification on  ########################
@@ -376,10 +518,6 @@ stargazer(total7,
 ```
 
 
-
-
-
-
 ```{r results='asis', echo=FALSE, warning=FALSE}
 ########################## Table 2. Panel B: Rural Electrification on  ########################
 
@@ -434,7 +572,7 @@ stargazer(rural1, rural2, rural3,
           se = list(se_rural1, se_rural2, se_rural3),
           column.sep.width = "2pt",
           font.size = "small",
-          title = "Regression Results for rural Electrification Rate",
+          title = "Regression Results for Rural Electrification Rate",
           covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Time")
 )
 
@@ -521,7 +659,7 @@ stargazer(urban1, urban2, urban3,
           se = list(se_urban1, se_urban2, se_urban3), 
           column.sep.width = "2pt",
           font.size = "small",
-          title = "Regression Results for urban Electrification Rate",
+          title = "Regression Results for Urban Electrification Rate",
           covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Time")
 )
 
@@ -534,7 +672,7 @@ stargazer(urban4, urban5, urban6,
           se = list(se_urban4, se_urban5, se_urban6),
           column.sep.width = "3pt",
           font.size = "small",
-          title = "Regression Results for urban Electrification Rate Cont.",
+          title = "Regression Results for Urban Electrification Rate Cont.",
           covariate.labels = c("Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
 )
 
@@ -547,79 +685,59 @@ stargazer(urban7,
           se = list(se_urban7),
           column.sep.width = "3pt",
           font.size = "small",
-          title = "Regression Results for urban Electrification Rate Cont.",
+          title = "Regression Results for Urban Electrification Rate Cont.",
           covariate.labels = c("Population Density (k/sqkm)", "Urban Pop. Share", "Hydro Potential per Capita (log) (kWh/k)", "Oil, Gas, Coal Rents", "Nat. Resource Rents", "Democracy", "Time")
 )
 
 ```
 
+\newpage
 
-```{r echo=FALSE, message=FALSE, warning=FALSE}
-############################################### Maps #########################################
 
-# load libraries for maps part
-library(sf)
-library(rgdal)
-library(prevR)
-library(haven)
-library(sf)
-library(rnaturalearth)
-library(rnaturalearthdata)
-library(rgeos)
-library(ggspatial)
-library(ggrepel)
-library(tidyverse)
-library(ggplot2)
-library(ggmap)
-library(maps)
-library(mapdata)
-library(tidyverse)
+The results from models were very insightful. As the authors also mentioned, population densities are a robust predictor of overperformance in both total and rural electrification. For example, the range for the population density coefficient ranges from 21.6 to 56.5 and the coefficient always had the highest value among other predictors. Additionally, the relationship between urban population share and rural electrification is fairly weak and didn’t show statistical significance. The value of the coefficient of urban population share was small most of the time and only significant in three out of the six models. This might be because it is easier to electrify in urban regions than rural regions as households are close and clustered together. Moreover, another interesting finding is that hydro potential per capita seemed to only be significant in the model with rural electrification where all other predictors were excluded. This is interesting and it could be that rural areas are becoming more technologically advanced over time in terms of hydropower. The authors also pointed this out but another finding is that there is a negative correlation relationship between fossil fuel rents and electrification. However, I also noticed that natural resource rents is a significant predictor in most of the models with a p-value less than 0.05. A possible reason is that regions with better economies can afford the technological resources needed to access electricity. Democracy was also shown as a weak predictor in that it was very small and not significant. 
 
-# Read data
-tmw <- TMWorldBorders
-# plot(tmw)
 
-uscoord_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/uscoord.dta") %>%
-  rename(id = "_ID", long = "_X", lat = "_Y")
+\newpage
 
-usdb_df <- read_dta("/Users/tahmidahmed/Desktop/gov52rep/gov52_replication/TM_WORLD_BORDERS-0.3/maps_data.dta") 
+## Extensions
 
-electric <- uscoord_df %>% left_join(usdb_df, by = "id") %>%
-  rename(group = id) 
-```
+In the first extension, I will be 
 
-```{r echo=FALSE}
-# Total electrification in 1990
-ggplot(data = electric %>% filter(year == 1990)) + 
-  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43") 
-
-# Total electrification in 2010
-ggplot(data = electric %>% filter(year == 2010)) + 
-  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_total, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")
-
-# Rural electrification in 1990
-ggplot(data = electric %>% filter(year == 1990)) + 
-  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
-
-# Rural electrification in 2010
-ggplot(data = electric %>% filter(year == 2010)) + 
-  geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_rural, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
-
+```{r echo=FALSE, out.width="50%"}
 # Urban electrification in 1990
 ggplot(data = electric %>% filter(year == 1990)) + 
   geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_urban, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43")  
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 4a. 1986-1994", fill = "Total Urban Rate")
 
 # Urban electrification in 2010
 ggplot(data = electric %>% filter(year == 2010)) + 
   geom_polygon(aes(x = long, y = lat, fill = ma_elecrate_urban, group = group)) +
-  scale_fill_gradient(low = "#56B1F7",high = "#132B43") 
+  scale_fill_gradient(low = "#56B1F7",high = "#132B43") +
+  labs(caption = "Figure 4b. 2006-2014", fill = "Total Urban Rate")
 
 ```
 
+```{r results='asis', echo=FALSE, warning=FALSE}
+# Extension of 2nd type of model but with log pop
+ext1 <- plm(formula = delec_total_lowess ~ logpop + time, data=rep_data %>% filter(outliers == 0), model="pooling") 
+coef_ext1 <- coeftest(ext1, vcov=vcovHC(ext1, type="sss", cluster="group")) 
+cov_ext1 <- vcovHC(ext1, type="sss", cluster="group")
+se_ext1   <- sqrt(diag(cov_ext1))
+
+
+stargazer(ext1,  
+          type="latex",
+          header = FALSE,
+          dep.var.labels = "Total Electrification Rate",
+          # results = "asis", 
+          # column.labels=c("All","E/SE Asia", "LA", "MENA"), 
+          se = list(se_ext1),
+          column.sep.width = "3pt",
+          font.size = "small",
+          title = "Regression Results from Extension.",
+          covariate.labels = c("Log Population", "Time")
+)
+```
 
 
